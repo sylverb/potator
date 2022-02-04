@@ -35,6 +35,7 @@
 #define COLOUR_SCHEME_GREEN		2
 #define COLOUR_SCHEME_BLUE		3
 
+extern uint8 controls_state;
 extern void supervision_init(void);
 extern void supervision_reset(void);
 extern void supervision_reset_handler(void);
@@ -46,10 +47,15 @@ extern void supervision_exec_fast(int16 *backbuffer, BOOL bRender);
 extern BOOL supervision_load(uint8 *rom, uint32 romSize);
 extern BOOL supervision_update_input(void);
 extern void supervision_set_colour_scheme(int ws_colourScheme);
-extern M6502	*supervision_get6502regs(void);
+//extern M6502	*supervision_get6502regs(void);
 extern void supervision_turnSound(BOOL bOn);
+extern void supervision_sound_stream_update(uint8 *stream, int len);
 
+#ifndef POTATOR_NO_FS
 extern int	sv_loadState(char *statepath, int id);
 extern int	sv_saveState(char *statepath, int id);
-
+#else
+extern int	sv_saveState_flash(uint8 *dest_buffer);
+extern int	sv_loadState_flash(uint8 *src_buffer);
+#endif
 #endif

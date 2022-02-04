@@ -42,7 +42,7 @@
 #define FALSE	0
 #endif
 
-#if defined(_WIN_) || defined(_ODSDL_)
+#if defined(_WIN_) || defined(_ODSDL_) || defined(GNW)
 
 #define BIT(n) (1 << (n))
 

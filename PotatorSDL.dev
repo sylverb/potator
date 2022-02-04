@@ -100,7 +100,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit9]
-FileName=common\sound.h
+FileName=common\wsv_sound.h
 CompileCpp=0
 Folder=
 Compile=1
@@ -220,7 +220,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit21]
-FileName=common\sound.c
+FileName=common\wsv_sound.c
 CompileCpp=0
 Folder=
 Compile=1

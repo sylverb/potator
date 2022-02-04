@@ -1,13 +1,13 @@
-#ifndef __SOUND_H__
-#define __SOUND_H__
+#ifndef __WSV_SOUND_H__
+#define __WSV_SOUND_H__
 
 #include "supervision.h"
 
 #define BPS			44100
 
 
-void sound_init();
-void sound_reset();
+void supervision_sound_init();
+void supervision_sound_reset();
 void sound_done();
 void sound_write(uint32 Addr, uint8 data);
 void sound_noise_write(uint32 Addr, uint8 data);

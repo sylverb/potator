@@ -10,7 +10,7 @@ void Acallback(void *userdata, Uint8 *stream, int len) {
 	unsigned int i;
 
 	SDL_mutexP(sndlock);
-	sound_stream_update(stream,len);
+	supervision_sound_stream_update(stream,len);
 	SDL_mutexV(sndlock);
 }
 

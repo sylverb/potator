@@ -11,7 +11,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 #include "supervision.h"
 #include "memorymap.h"
-#include "sound.h"
+#include "wsv_sound.h"
 #include "types.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -61,7 +61,7 @@ void supervision_init(void)
 	gpu_init();
 	timer_init();
 	controls_init();
-	sound_init();
+	supervision_sound_init();
 	interrupts_init();
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -105,7 +105,7 @@ void supervision_reset(void)
 	gpu_reset();
 	timer_reset();
 	controls_reset();
-	sound_reset();
+	supervision_sound_reset();
 	interrupts_reset();
 
 	Reset6502(&m6502_registers);
@@ -183,6 +183,7 @@ BOOL supervision_update_input(void)
 {
 	return(controls_update());
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -209,8 +210,11 @@ void supervision_exec(int16 *backbuffer, BOOL bRender)
 #ifdef NDS
 		gpu_render_scanline(supervision_scanline, backbuffer);
 		backbuffer += 160+96;
+#elif defined (__linux__)
+
+		gpu_render_scanline(supervision_scanline, backbuffer);
+		backbuffer += 160;
 #else
-		//gpu_render_scanline(supervision_scanline, backbuffer);
 		gpu_render_scanline_fast(scan1, backbuffer);
 		backbuffer += 160;
 		scan1 += 0x30;
@@ -243,6 +247,7 @@ void supervision_turnSound(BOOL bOn)
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef POTATOR_NO_FS
 int	sv_loadState(char *statepath, int id)
 {
 	FILE* fp;
@@ -278,6 +283,44 @@ int	sv_loadState(char *statepath, int id)
 
 	return(1);
 }
+#else
+int	sv_loadState_flash(uint8 *src_buffer)
+{
+	uint16 offset = 0;
+	int8 bank;
+	if (memcmp(src_buffer,"WSV",3) == 0) {
+		offset+=3;
+		memcpy(supervision_gpu_regs,src_buffer+offset,4*sizeof(int8));
+		offset+=4*sizeof(int8);
+		memcpy(&supervision_io_data,src_buffer+offset,sizeof(int8));
+		offset+=sizeof(int8);
+		memcpy(&supervision_timer_reg,src_buffer+offset,sizeof(int8));
+		offset+=sizeof(int8);
+		memcpy(&supervision_timer_cycles,src_buffer+offset,sizeof(int32));
+		offset+=sizeof(int32);
+		memcpy(&supervision_timer_activated,src_buffer+offset,sizeof(BOOL));
+		offset+=sizeof(BOOL);
+		memcpy(memorymap_lowerRam,src_buffer+offset,0x2000);
+		offset+=0x2000;
+		memcpy(memorymap_upperRam,src_buffer+offset,0x2000);
+		offset+=0x2000;
+		memcpy(memorymap_regs,src_buffer+offset,0x2000);
+		offset+=0x2000;
+		memcpy(&m6502_registers,src_buffer+offset,sizeof(m6502_registers));
+		offset+=sizeof(m6502_registers);
+
+		// update bank address
+		bank = ((memorymap_regs[0x26] & 0xe0) >> 5) % (memorymap_programRomSize / 0x4000);
+		//fprintf(log_get(), "memorymap: writing 0x%.2x to rom bank register\n", Value);
+		memorymap_lowerRomBank = memorymap_programRom + (bank * 0x4000);
+		// Fixed rom bank always pointing to last 16kB of rom memory
+		memorymap_upperRomBank = memorymap_programRom + (memorymap_programRomSize-0x4000);
+	}
+
+	return(offset);
+}
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -288,6 +331,7 @@ int	sv_loadState(char *statepath, int id)
 //
 ////////////////////////////////////////////////////////////////////////////////
 
+#ifndef POTATOR_NO_FS
 int	sv_saveState(char *statepath, int id)
 {
 	FILE* fp;
@@ -327,3 +371,30 @@ int	sv_saveState(char *statepath, int id)
 
 	return(1);
 }
+#else
+int	sv_saveState_flash(uint8 *dest_buffer)
+{
+	uint16 offset = 0;
+	memcpy(dest_buffer+offset,"WSV",3);
+	offset+=3;
+	memcpy(dest_buffer+offset,supervision_gpu_regs,4*sizeof(int8));
+	offset+=4*sizeof(int8);
+	memcpy(dest_buffer+offset,&supervision_io_data,sizeof(int8));
+	offset+=sizeof(int8);
+	memcpy(dest_buffer+offset,&supervision_timer_reg,sizeof(int8));
+	offset+=sizeof(int8);
+	memcpy(dest_buffer+offset,&supervision_timer_cycles,sizeof(int32));
+	offset+=sizeof(int32);
+	memcpy(dest_buffer+offset,&supervision_timer_activated,sizeof(BOOL));
+	offset+=sizeof(BOOL);
+	memcpy(dest_buffer+offset,memorymap_lowerRam,0x2000);
+	offset+=0x2000;
+	memcpy(dest_buffer+offset,memorymap_upperRam,0x2000);
+	offset+=0x2000;
+	memcpy(dest_buffer+offset,memorymap_regs,0x2000);
+	offset+=0x2000;
+	memcpy(dest_buffer+offset,&m6502_registers,sizeof(m6502_registers));
+	offset+=sizeof(m6502_registers);
+	return(offset);
+}
+#endif

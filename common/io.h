@@ -3,6 +3,8 @@
 
 #include "types.h"
 
+extern uint8 supervision_io_data;
+
 void io_init(void);
 void io_reset(void);
 void io_done(void);

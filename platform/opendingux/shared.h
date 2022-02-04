@@ -35,7 +35,7 @@ typedef int bool;
 #define PIX_TO_RGB(fmt, r, g, b) (((r>>fmt->Rloss)<<fmt->Rshift)| ((g>>fmt->Gloss)<<fmt->Gshift)|((b>>fmt->Bloss)<<fmt->Bshift))
 
 // potator dependencies
-#include "../../common/sound.h"
+#include "../../common/wsv_sound.h"
 #include "../../common/memorymap.h"
 #include "../../common/supervision.h"
 #include "../../common/controls.h"

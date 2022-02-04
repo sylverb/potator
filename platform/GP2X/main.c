@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "sound.h"
+#include "wsv_sound.h"
 #include "memorymap.h"
 #include "supervision.h"
 #include "controls.h"

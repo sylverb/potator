@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static uint8 timer_regs[2];
-static int32 timer_cycles;
-static BOOL   timer_activated;
+uint8 supervision_timer_reg;
+int32 supervision_timer_cycles;
+BOOL  supervision_timer_activated;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -44,12 +44,10 @@ void timer_done()
 void timer_reset()
 {
 	//fprintf(log_get(), "timer: reset\n");
-	timer_regs[0]=0x00;
-	timer_regs[1]=0x00;
-	timer_regs[2]=0x00;
+	supervision_timer_reg = 0x00;
 
-	timer_cycles = 0;
-	timer_activated = FALSE;
+	supervision_timer_cycles = 0;
+	supervision_timer_activated = FALSE;
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -60,18 +58,14 @@ void timer_reset()
 //
 //
 ////////////////////////////////////////////////////////////////////////////////
-void timer_write(uint32 addr, uint8 data)
+void timer_write(uint32 addr, uint8 data, uint32 prescale)
 {
 	//iprintf("timer: writing 0x%.2x at 0x%.4x\n", data, addr);
-	timer_regs[addr&0x01] = data;
-
-	if (addr&0x01)
-	{
-		timer_cycles = ((uint32)data)*256;
-		timer_activated = TRUE;
-		timer_regs[0]&=0xfe;
-	}
+	supervision_timer_reg = data;
+	supervision_timer_cycles = ((uint32)data)*prescale;
+	supervision_timer_activated = TRUE;
 }
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +77,7 @@ void timer_write(uint32 addr, uint8 data)
 ////////////////////////////////////////////////////////////////////////////////
 uint8 timer_read(uint32 addr)
 {
-	return(timer_regs[addr&0x01]);
+	return(supervision_timer_reg);
 }
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -96,16 +90,17 @@ uint8 timer_read(uint32 addr)
 ////////////////////////////////////////////////////////////////////////////////
 void timer_exec(uint32 cycles)
 {
-	if (timer_activated)
+	if (supervision_timer_activated)
 	{
-		timer_cycles-=cycles;
+		supervision_timer_cycles-=cycles;
 		
-		if (timer_cycles<0)
+		if (supervision_timer_cycles<0)
 		{
-			timer_regs[0]|=0x01;
+			supervision_timer_reg = 0;
+			memorymap_setTimerBit();
 //			fprintf(log_get(), "timer: irq\n");
 			interrupts_irq();
-			timer_activated=FALSE;
+			supervision_timer_activated=FALSE;
 		}
 	}
 }

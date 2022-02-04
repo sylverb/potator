@@ -56,8 +56,8 @@ win/common/memory.o: common/memory.c
 win/common/memorymap.o: common/memorymap.c
 	$(CC) -c common/memorymap.c -o win/common/memorymap.o $(CFLAGS)
 
-win/common/sound.o: common/sound.c
-	$(CC) -c common/sound.c -o win/common/sound.o $(CFLAGS)
+win/common/sound.o: common/wsv_sound.c
+	$(CC) -c common/wsv_sound.c -o win/common/wsv_sound.o $(CFLAGS)
 
 win/common/timer.o: common/timer.c
 	$(CC) -c common/timer.c -o win/common/timer.o $(CFLAGS)

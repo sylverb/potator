@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "resource.h"
-#include "../../common/sound.h"
+#include "../../common/wsv_sound.h"
 #include "../../common/memorymap.h"
 #include "../../common/supervision.h"
 #include "../../common/controls.h"
