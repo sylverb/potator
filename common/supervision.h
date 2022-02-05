@@ -1,61 +1,103 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
+/**
+ * \file supervision.h
+ */
 
 #ifndef __SUPERVISION_H__
 #define __SUPERVISION_H__
 
-#include "log.h"
 #include "types.h"
-#include "memory.h"
-#include "version.h"
-#include "io.h"
-#include "gpu.h"
-#include "timer.h"
-#include "controls.h"
-#include "memorymap.h"
-#include "interrupts.h"
 
-#ifdef GP2X
-#include "menues.h"
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#include "./m6502/m6502.h"
+#define SV_CORE_VERSION 0x01000005U
+#define SV_CORE_VERSION_MAJOR ((SV_CORE_VERSION >> 24) & 0xFF)
+#define SV_CORE_VERSION_MINOR ((SV_CORE_VERSION >> 12) & 0xFFF)
+#define SV_CORE_VERSION_PATCH ((SV_CORE_VERSION >>  0) & 0xFFF)
 
-#define COLOUR_SCHEME_DEFAULT	0
-#define COLOUR_SCHEME_AMBER		1
-#define COLOUR_SCHEME_GREEN		2
-#define COLOUR_SCHEME_BLUE		3
+/*! Screen width.  */
+#define SV_W 160
+/*! Screen height. */
+#define SV_H 160
+/*!
+ * \sa supervision_set_map_func()
+ */
+typedef uint16 (*SV_MapRGBFunc)(uint8 r, uint8 g, uint8 b);
+/*!
+ * \sa supervision_set_color_scheme()
+ */
+enum SV_COLOR {
+      SV_COLOR_SCHEME_DEFAULT
+    , SV_COLOR_SCHEME_AMBER
+    , SV_COLOR_SCHEME_GREEN
+    , SV_COLOR_SCHEME_BLUE
+    , SV_COLOR_SCHEME_BGB
+    , SV_COLOR_SCHEME_WATAROO
 
-extern uint8 controls_state;
-extern void supervision_init(void);
-extern void supervision_reset(void);
-extern void supervision_reset_handler(void);
-extern void supervision_done(void);
-extern void supervision_exec(int16 *backbuffer, BOOL bRender);
-extern void supervision_exec2(int16 *backbuffer, BOOL bRender);
-extern void supervision_exec3(int16 *backbuffer, BOOL bRender);
-extern void supervision_exec_fast(int16 *backbuffer, BOOL bRender);
-extern BOOL supervision_load(uint8 *rom, uint32 romSize);
-extern BOOL supervision_update_input(void);
-extern void supervision_set_colour_scheme(int ws_colourScheme);
-//extern M6502	*supervision_get6502regs(void);
-extern void supervision_turnSound(BOOL bOn);
-extern void supervision_sound_stream_update(uint8 *stream, int len);
+    , SV_COLOR_SCHEME_COUNT
+};
+/*!
+ * \sa supervision_set_ghosting()
+ */
+#define SV_GHOSTING_MAX 8
+ /*!
+  * \sa supervision_update_sound()
+  */
+#define SV_SAMPLE_RATE 44100
 
-#ifndef POTATOR_NO_FS
-extern int	sv_loadState(char *statepath, int id);
-extern int	sv_saveState(char *statepath, int id);
-#else
-extern int	sv_saveState_flash(uint8 *dest_buffer);
-extern int	sv_loadState_flash(uint8 *src_buffer);
+void supervision_init(void);
+void supervision_reset(void);
+void supervision_done(void);
+/*!
+ * \return TRUE - success, FALSE - error
+ */
+BOOL supervision_load(const uint8 *rom, uint32 romSize);
+void supervision_exec(uint16 *backbuffer);
+void supervision_exec_ex(uint16 *backbuffer, int16 backbufferWidth);
+
+/*!
+ * \param data Bits 0-7: Right, Left, Down, Up, B, A, Select, Start.
+ */
+void supervision_set_input(uint8 data);
+/*!
+ * \param func Default: RGB888 -> RGB555 (RGBA5551), R - least significant.
+ */
+void supervision_set_map_func(SV_MapRGBFunc func);
+/*!
+ * \param colorSheme in range [0, SV_COLOR_SCHEME_COUNT - 1] or SV_COLOR_* constants.
+ * \sa SV_COLOR
+ */
+void supervision_set_color_scheme(int colorScheme);
+/*!
+ * Add ghosting (blur). It reduces flickering.
+ * \param frameCount in range [0, SV_GHOSTING_MAX]. 0 - disable.
+ */
+void supervision_set_ghosting(int frameCount);
+/*!
+ * Generate U8 (0 - 45), 2 channels.
+ * \param len in bytes.
+ */
+void supervision_update_sound(uint8 *stream, uint32 len);
+
+/*!
+ * Get color scheme profile.
+ * \return index of color scheme
+ */
+int supervision_get_color_scheme();
+/*!
+ * Save state to dst_buffer.
+ * \return length of buffer
+ */
+int supervision_save_state(uint8 *dst_buffer);
+/*!
+ * Load state from src_buffer.
+ * \return length of buffer
+ */
+int supervision_load_state(uint8 *src_buffer);
+
+#ifdef __cplusplus
+}
 #endif
+
 #endif

@@ -1,276 +1,228 @@
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
 #include "gpu.h"
+
+#include "memorymap.h"
+
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 
-#ifdef GP2X
-#include "minimal.h"
-#endif
-#ifdef NDS
-#include <nds.h>
-#endif
-
-#ifdef _ODSDL_
-#include "../platform/opendingux/shared.h"
-#endif
-
-static uint8 current_colourScheme = 0;
-#ifndef POTATOR_NO_MALLOC
-uint16	*supervision_palette;
-#else
-uint16	supervision_palette[4];
-#endif
-uint8   supervision_gpu_regs[4];
-#ifdef NDS
-#define RGB555(R,G,B) ((((int)(B))<<10)|(((int)(G))<<5)|(((int)(R)))|BIT(15))
-#else
-#define RGB555(R,G,B) ((((int)(B))<<10)|(((int)(G))<<5)|(((int)(R))))
-#endif
-
+// RGB565
 #define RGB565(R,G,B) (((((int)(R)) & 0xf8)<<8) + ((((int)(G)) & 0xfc)<<3)+(((int)(B))>>3))
 
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
+static uint16 rgb565(uint8 r, uint8 g, uint8 b)
+{
+    return RGB565(r , g , b);
+}
+
+static SV_MapRGBFunc mapRGB = rgb565;
+
+static const uint8 palettes[SV_COLOR_SCHEME_COUNT][12] = {
+{
+    252, 252, 252,
+    168, 168, 168,
+     84,  84,  84,
+      0,   0,   0,
+},
+{
+    252, 154,   0,
+    168, 102,   0,
+     84,  51,   0,
+      0,   0,   0,
+},
+{
+     50, 227,  50,
+     34, 151,  34,
+     17,  76,  17,
+      0,   0,   0,
+},
+{
+      0, 154, 252,
+      0, 102, 168,
+      0,  51,  84,
+      0,   0,   0,
+},
+{
+    224, 248, 208,
+    136, 192, 112,
+     52, 104,  86,
+      8,  24,  32,
+},
+{
+    0x7b, 0xc7, 0x7b,
+    0x52, 0xa6, 0x8c,
+    0x2e, 0x62, 0x60,
+    0x0d, 0x32, 0x2e,
+},
+};
+
+static uint16 palette[4];
+static int paletteIndex;
+
+#define SB_MAX (SV_GHOSTING_MAX + 1)
+static int ghostCount = 0;
+static uint8 *screenBuffers[SB_MAX];
+static uint8 screenBufferInnerX[SB_MAX];
+
+static void add_ghosting(uint32 scanline, uint16 *backbuffer, uint8 start_x, uint8 end_x);
+
 void gpu_init(void)
 {
-	#ifdef DEBUG
-	printf("Gpu Init\n");
-	#endif
-	//fprintf(log_get(), "gpu: init\n");
-	#ifndef POTATOR_NO_MALLOC
-	memory_malloc_secure((void**)&supervision_palette,  4*sizeof(int16), "Palette");
-	#endif
 }
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-void gpu_done(void)
-{
-	//fprintf(log_get(), "gpu: done\n");
-}
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
+
 void gpu_reset(void)
 {
-	#ifdef DEBUG
-	printf("Gpu Reset\n");
-	#endif
-	current_colourScheme = 0;
-#ifdef GNW
-	supervision_palette[3] = RGB565(0,0,0);
-	supervision_palette[2] = RGB565(85,85,85);
-	supervision_palette[1] = RGB565(170,170,170);
-	supervision_palette[0] = RGB565(240,240,240);
-#endif
-#ifdef GP2X
-	supervision_palette[3] = gp2x_video_RGB_color16(0,0,0);
-	supervision_palette[2] = gp2x_video_RGB_color16(85,85,85);
-	supervision_palette[1] = gp2x_video_RGB_color16(170,170,170);
-	supervision_palette[0] = gp2x_video_RGB_color16(170,170,170);
-#endif
-#ifdef NDS
-	supervision_palette[3] = RGB555(0,0,0);
-	supervision_palette[2] = RGB555(10,10,10);
-	supervision_palette[1] = RGB555(20,20,20);
-	supervision_palette[0] = RGB555(30,30,30);
-#endif 
-#ifdef _WIN_
-	supervision_palette[3] = RGB555(0,0,0);
-	supervision_palette[2] = RGB555(10,10,10);
-	supervision_palette[1] = RGB555(20,20,20);
-	supervision_palette[0] = RGB555(30,30,30);
-#endif
-
-#ifdef _ODSDL_
-	supervision_palette[3] = PIX_TO_RGB(actualScreen->format,0,0,0);
-	supervision_palette[2] = PIX_TO_RGB(actualScreen->format,85,85,85);
-	supervision_palette[1] = PIX_TO_RGB(actualScreen->format,170,170,170);
-	supervision_palette[0] = PIX_TO_RGB(actualScreen->format,240,240,240);
-#endif
-
-	memset(supervision_gpu_regs, 0, 4);
-}
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-void gpu_set_colour_scheme(int colourScheme)
-{
-	#ifdef DEBUG
-	printf("Gpu Set Color Scheme\n");
-	#endif
-
-	float greenf=1;
-	float bluef=1;
-	float redf=1;
-
-	current_colourScheme = colourScheme;
-	switch (colourScheme)
-	{
-	case COLOUR_SCHEME_DEFAULT:
-		break;
-	case COLOUR_SCHEME_AMBER:
-		greenf=0.61f;
-		bluef=0.00f;
-		redf=1.00f;
-		break;
-	case COLOUR_SCHEME_GREEN:
-		greenf=0.90f;
-		bluef=0.20f;
-		redf=0.20f;
-		break;
-	case COLOUR_SCHEME_BLUE:
-		greenf=0.30f;
-		bluef=0.75f;
-		redf=0.30f;
-		break;
-	default: 
-		colourScheme=0; 
-		break;
-	}
-#ifdef GNW
-	supervision_palette[3] = RGB565(0,0,0);
-	supervision_palette[2] = RGB565(85*redf, 85*greenf, 85*bluef);
-	supervision_palette[1] = RGB565(170*redf, 170*greenf, 170*bluef);
-	supervision_palette[0] = RGB565(255*redf, 255*greenf, 255*bluef);
-#endif
-#ifdef GP2X
-	supervision_palette[3] = gp2x_video_RGB_color16(0*redf,0*greenf,0*bluef);
-	supervision_palette[2] = gp2x_video_RGB_color16(85*redf,85*greenf,85*bluef);
-	supervision_palette[1] = gp2x_video_RGB_color16(170*redf,170*greenf,170*bluef);
-	supervision_palette[0] = gp2x_video_RGB_color16(255*redf,255*greenf,255*bluef);
-#endif
-#ifdef NDS
-	supervision_palette[3] = RGB555(0*redf,0*greenf,0*bluef);
-	supervision_palette[2] = RGB555(10*redf,10*greenf,10*bluef);
-	supervision_palette[1] = RGB555(20*redf,20*greenf,20*bluef);
-	supervision_palette[0] = RGB555(30*redf,30*greenf,30*bluef);
-#endif
-#ifdef _WIN_
-	supervision_palette[3] = RGB555(0*redf,0*greenf,0*bluef);
-	supervision_palette[2] = RGB555(10*redf,10*greenf,10*bluef);
-	supervision_palette[1] = RGB555(20*redf,20*greenf,20*bluef);
-	supervision_palette[0] = RGB555(30*redf,30*greenf,30*bluef);
-#endif
-
-#ifdef _ODSDL_
-	int p11 = (int) 85*redf; int p12 = (int) 85*greenf; int p13 = (int) 85*bluef;
-	int p21 = (int) 170*redf; int p22 = (int) 170*greenf; int p23 = (int) 170*bluef;
-	int p31 = (int) 255*redf; int p32 = (int) 255*greenf; int p33 = (int) 255*bluef;
-    supervision_palette[3] = PIX_TO_RGB(actualScreen->format,0,0,0);
-	supervision_palette[2] = PIX_TO_RGB(actualScreen->format,p11, p12, p13);
-	supervision_palette[1] = PIX_TO_RGB(actualScreen->format,p21, p22, p23);
-	supervision_palette[0] = PIX_TO_RGB(actualScreen->format,p31, p32, p33);
-#endif
-}
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-int gpu_get_colour_scheme()
-{
-	return current_colourScheme;
-}
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-void gpu_write(uint32 addr, uint8 data)
-{
-	supervision_gpu_regs[(addr&0x03)] = data;
-}
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-uint8 gpu_read(uint32 addr)
-{
-	return(supervision_gpu_regs[(addr&0x03)]);
-}
-////////////////////////////////////////////////////////////////////////////////
-//
-////////////////////////////////////////////////////////////////////////////////
-//
-//
-//
-//
-//
-////////////////////////////////////////////////////////////////////////////////
-void gpu_render_scanline(uint32 scanline, int16 *backbuffer)
-{
-	uint8 *vram_line = &(memorymap_getUpperRamPointer())[(supervision_gpu_regs[2] >> 2) + (scanline*0x30)];
-	uint8 x;
-
-	for (x =0; x < 160; x += 4)
-	{
-		uint8 b = *(vram_line++);
-		backbuffer[3] = supervision_palette[((b >> 6) & 0x03)];
-		backbuffer[2] = supervision_palette[((b >> 4) & 0x03)];
-		backbuffer[1] = supervision_palette[((b >> 2) & 0x03)];
-		backbuffer[0] = supervision_palette[((b >> 0) & 0x03)];
-		backbuffer += 4;
-	}
+    gpu_set_map_func(NULL);
+    gpu_set_color_scheme(SV_COLOR_SCHEME_DEFAULT);
+    gpu_set_ghosting(0);
 }
 
-void gpu_render_scanline_fast(uint32 scanline, uint16 *backbuffer)
+void gpu_done(void)
 {
-	uint8 *vram_line = &(memorymap_getUpperRamPointer())[(supervision_gpu_regs[2] >> 2) + (scanline)];
-	uint8 x;
-	uint32 *buf = (uint32 *) backbuffer;
-	
-	for (x =0; x < 160; x += 4)
-	{
-		uint8 b = *(vram_line++);
-		*(buf++) = (supervision_palette[((b >> 2) & 0x03)]<<16) | (supervision_palette[((b) & 0x03)]);
-		*(buf++) = (supervision_palette[((b >> 6) & 0x03)]<<16) | (supervision_palette[((b >> 4) & 0x03)]);
-	}
+    gpu_set_ghosting(0);
+}
+
+void gpu_set_map_func(SV_MapRGBFunc func)
+{
+    mapRGB = func;
+    if (mapRGB == NULL) {
+        mapRGB = rgb565;
+    }
+}
+
+int  gpu_get_color_scheme(void)
+{
+    return paletteIndex;
+}
+
+void gpu_set_color_scheme(int colorScheme)
+{
+    int i;
+    if (colorScheme < 0 || colorScheme >= SV_COLOR_SCHEME_COUNT) {
+        return;
+    }
+    for (i = 0; i < 4; i++) {
+        palette[i] = mapRGB(palettes[colorScheme][i * 3 + 0],
+                            palettes[colorScheme][i * 3 + 1],
+                            palettes[colorScheme][i * 3 + 2]);
+    }
+    paletteIndex = colorScheme;
+}
+
+// Faster but it's not accurate
+//void gpu_render_scanline(uint32 scanline, uint16 *backbuffer)
+//{
+//    uint8 *vram_line = memorymap_getUpperRamPointer() + scanline;
+//    uint8 x;
+//
+//    for (x = 0; x < SV_W; x += 4) {
+//        uint8 b = *(vram_line++);
+//        backbuffer[0] = palette[((b >> 0) & 0x03)];
+//        backbuffer[1] = palette[((b >> 2) & 0x03)];
+//        backbuffer[2] = palette[((b >> 4) & 0x03)];
+//        backbuffer[3] = palette[((b >> 6) & 0x03)];
+//        backbuffer += 4;
+//    }
+//}
+
+void gpu_render_scanline(uint32 scanline, uint16 *backbuffer, uint8 innerx, uint8 size)
+{
+    uint8 *vram_line = memorymap_getUpperRamPointer() + scanline;
+    uint8 x, j = innerx, b = 0;
+
+    // #1
+    if (j & 3) {
+        b = *vram_line++;
+        b >>= (j & 3) * 2;
+    }
+    for (x = 0; x < size; x++, j++) {
+        if (!(j & 3)) {
+            b = *(vram_line++);
+        }
+        backbuffer[x] = palette[b & 3];
+        b >>= 2;
+    }
+    // #2 Slow
+    /*for (x = 0; x < size; x++, j++) {
+        b = vram_line[j >> 2];
+        backbuffer[x] = palette[(b >> ((j & 3) * 2)) & 3];
+    }*/
+
+    if (ghostCount != 0) {
+        add_ghosting(scanline, backbuffer, innerx, size);
+    }
+}
+
+void gpu_set_ghosting(int frameCount)
+{
+    int i;
+    if (frameCount < 0)
+        ghostCount = 0;
+    else if (frameCount > SV_GHOSTING_MAX)
+        ghostCount = SV_GHOSTING_MAX;
+    else
+        ghostCount = frameCount;
+
+    if (ghostCount != 0) {
+        if (screenBuffers[0] == NULL) {
+            for (i = 0; i < SB_MAX; i++) {
+                screenBuffers[i] = malloc(SV_H * SV_W / 4);
+                if (screenBuffers[i] == NULL) {
+                    return;
+                }
+            }
+        }
+        for (i = 0; i < SB_MAX; i++) {
+            memset(screenBuffers[i], 0, SV_H * SV_W / 4);
+        }
+    }
+    else {
+        for (i = 0; i < SB_MAX; i++) {
+            free(screenBuffers[i]);
+            screenBuffers[i] = NULL;
+        }
+    }
+}
+
+static void add_ghosting(uint32 scanline, uint16 *backbuffer, uint8 innerx, uint8 size)
+{
+    static int curSB = 0;
+    static int lineCount = 0;
+
+    uint8 *vram_line = memorymap_getUpperRamPointer() + scanline;
+    uint8 x, i, j;
+
+    screenBufferInnerX[curSB] = innerx;
+    memset(screenBuffers[curSB] + lineCount * SV_W / 4, 0, SV_W / 4);
+    for (j = innerx, x = 0; x < size; x++, j++) {
+        uint8 b = vram_line[j >> 2];
+        uint8 innerInd = (j & 3) * 2;
+        uint8 c = (b >> innerInd) & 3;
+        int pixInd = (x + lineCount * SV_W) / 4;
+        if (c != 3) {
+            for (i = 0; i < ghostCount; i++) {
+                uint8 sbInd = (curSB + (SB_MAX - 1) - i) % SB_MAX;
+                uint8 innerInd_ = ((screenBufferInnerX[sbInd] + x) & 3) * 2;
+                uint8 c_ = (screenBuffers[sbInd][pixInd] >> innerInd_) & 3;
+                if (c_ > c) {
+#if 0
+                    backbuffer[x] = palette[3 - 3 * i / ghostCount];
+#else
+                    uint8 r = palettes[paletteIndex][c_ * 3 + 0];
+                    uint8 g = palettes[paletteIndex][c_ * 3 + 1];
+                    uint8 b = palettes[paletteIndex][c_ * 3 + 2];
+                    r =  r + (palettes[paletteIndex][c  * 3 + 0] - r) * i / ghostCount;
+                    g =  g + (palettes[paletteIndex][c  * 3 + 1] - g) * i / ghostCount;
+                    b =  b + (palettes[paletteIndex][c  * 3 + 2] - b) * i / ghostCount;
+                    backbuffer[x] = mapRGB(r, g, b);
+#endif
+                    break;
+                }
+            }
+        }
+        screenBuffers[curSB][pixInd] |= c << innerInd;
+    }
+
+    if (lineCount == SV_H - 1) {
+        curSB = (curSB + 1) % SB_MAX;
+    }
+    lineCount = (lineCount + 1) % SV_H;
 }

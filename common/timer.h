@@ -1,17 +1,17 @@
 #ifndef __TIMER_H__
 #define __TIMER_H__
 
-#include "supervision.h"
+#include "types.h"
 
-extern uint8 supervision_timer_reg;
-extern int32 supervision_timer_cycles;
-extern BOOL  supervision_timer_activated;
+#include <stdio.h>
 
-void timer_init();
-void timer_done();
-void timer_reset();
-void timer_write(uint32 addr, uint8 data, uint32 prescale);
-uint8 timer_read(uint32 addr);
+void timer_reset(void);
+void timer_write(uint8 data);
 void timer_exec(uint32 cycles);
+
+int32 timer_get_cycles(void);
+void timer_set_cycles(int32 cycles);
+BOOL timer_get_activated(void);
+void timer_set_activated(BOOL activated);
 
 #endif
