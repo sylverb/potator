@@ -55,7 +55,7 @@ static const uint8 palettes[SV_COLOR_SCHEME_COUNT][12] = {
 };
 
 static uint16 palette[4];
-static int paletteIndex;
+static int8 paletteIndex;
 
 #define SB_MAX (SV_GHOSTING_MAX + 1)
 static int ghostCount = 0;
@@ -88,12 +88,12 @@ void gpu_set_map_func(SV_MapRGBFunc func)
     }
 }
 
-int  gpu_get_color_scheme(void)
+int8  gpu_get_color_scheme(void)
 {
     return paletteIndex;
 }
 
-void gpu_set_color_scheme(int colorScheme)
+void gpu_set_color_scheme(int8 colorScheme)
 {
     int i;
     if (colorScheme < 0 || colorScheme >= SV_COLOR_SCHEME_COUNT) {

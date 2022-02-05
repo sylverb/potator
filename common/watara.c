@@ -113,7 +113,7 @@ void supervision_set_map_func(SV_MapRGBFunc func)
     gpu_set_map_func(func);
 }
 
-void supervision_set_color_scheme(int colorScheme)
+void supervision_set_color_scheme(int8 colorScheme)
 {
     gpu_set_color_scheme(colorScheme);
 }
@@ -143,8 +143,12 @@ int supervision_save_state(uint8 *dest_buffer)
     uint16 offset = 0;
     BOOL timer_activated = timer_get_activated();
     int32 timer_cycles = timer_get_cycles();
+    int8 color_scheme = supervision_get_color_scheme();
+
     memcpy(dest_buffer+offset,"WSV1",4);
     offset+=4;
+    memcpy(dest_buffer+offset,&color_scheme,sizeof(int8));
+    offset+=sizeof(int8);
     memcpy(dest_buffer+offset,&timer_cycles,sizeof(int32));
     offset+=sizeof(int32);
     memcpy(dest_buffer+offset,&timer_activated,sizeof(BOOL));
@@ -166,10 +170,13 @@ int supervision_load_state(uint8 *src_buffer)
     uint16 offset = 0;
     BOOL timer_activated;
     int32 timer_cycles;
+    int8 color_scheme;
 
     if (memcmp(src_buffer,"WSV1",4) == 0) {
         memorymap_reset();
         offset+=4;
+        memcpy(&color_scheme,src_buffer+offset,sizeof(int8));
+        offset+=sizeof(int8);
         memcpy(&timer_cycles,src_buffer+offset,sizeof(int32));
         timer_set_cycles(timer_cycles);
         offset+=sizeof(int32);
@@ -186,6 +193,8 @@ int supervision_load_state(uint8 *src_buffer)
         memcpy(&m6502_registers,src_buffer+offset,sizeof(m6502_registers));
         offset+=sizeof(m6502_registers);
         memorymap_update_lowerRomBank();
+        supervision_set_color_scheme(color_scheme);
+
     }
 
     return(offset);
