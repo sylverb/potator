@@ -401,8 +401,7 @@ word Run6502(M6502 *R)
 
         case 0x6C: /* from newer M6502 */
             M_LDWORD(K);
-            R->PC.B.l = Rd6502(K.W);
-            K.B.l++;
+            R->PC.B.l = Rd6502(K.W++);
             R->PC.B.h = Rd6502(K.W);    break;
         case 0x6D: MR_Ab(I); M_ADC(I);  break; /* ADC $ssss ABS */
         case 0x6E: MM_Ab(M_ROR);        break; /* ROR $ssss ABS */
@@ -416,7 +415,8 @@ word Run6502(M6502 *R)
         case 0x78: R->P |= I_FLAG;      break; /* SEI */
         case 0x79: MR_Ay(I); M_ADC(I);  break; /* ADC $ssss,y ABS,y */
         case 0x7A: M_POP(R->Y); M_FL(R->Y); break; /* uso */
-        case 0x7C: M_LDWORD(K); R->PC.B.l = Rd6502(K.W++); R->PC.B.h = Rd6502(K.W); R->PC.W += R->X; break; /* uso */
+        case 0x7C: M_LDWORD(K); K.W += R->X; R->PC.B.l = Rd6502(K.W++);
+            R->PC.B.h = Rd6502(K.W);    break; /* uso */
         case 0x7D: MR_Ax(I); M_ADC(I);  break; /* ADC $ssss,x ABS,x */
         case 0x7E: MM_Ax(M_ROR);        break; /* ROR $ssss,x ABS,x */
         case 0x80: M_JR;                break; /* uso */
