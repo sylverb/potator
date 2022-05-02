@@ -44,7 +44,7 @@ enum SV_COLOR {
  /*!
   * \sa supervision_update_sound()
   */
-#define SV_SAMPLE_RATE 44100
+#define SV_SAMPLE_RATE 48000
 
 void supervision_init(void);
 void supervision_reset(void);

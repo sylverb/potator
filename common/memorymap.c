@@ -4,13 +4,14 @@
 #include "wsv_sound.h"
 #include "timer.h"
 #include "./m6502/m6502.h"
+#include "gw_malloc.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-static uint8 lowerRam[0x2000];
-static uint8 upperRam[0x2000];
-static uint8 regs[0x2000];
+static uint8 *lowerRam;
+static uint8 *upperRam;
+static uint8 *regs;
 static const uint8 *programRom;
 static const uint8 *lowerRomBank;
 static const uint8 *upperRomBank;
@@ -44,9 +45,9 @@ void memorymap_set_timer_shot(void)
 
 void memorymap_init(void)
 {
-    memset(lowerRam, 0x00, 0x2000);
-    memset(upperRam, 0x00, 0x2000);
-    memset(regs,     0x00, 0x2000);
+    lowerRam = (uint8*)itc_malloc(0x2000);
+    upperRam = (uint8*)itc_malloc(0x2000);
+    regs     = (uint8*)itc_malloc(0x2000);
 }
 
 void memorymap_reset(void)
@@ -74,6 +75,9 @@ void memorymap_reset(void)
 
 void memorymap_done(void)
 {
+    lowerRam = NULL;
+    upperRam = NULL;
+    regs     = NULL;
 }
 
 uint8 memorymap_registers_read(uint32 Addr)
