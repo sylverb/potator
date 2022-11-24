@@ -1,3 +1,8 @@
+#ifdef TARGET_GNW
+#include "build/config.h"
+#endif
+
+#if !defined(TARGET_GNW) || (defined(TARGET_GNW) &&  defined(ENABLE_EMULATOR_WSV))
 #ifdef _MSC_VER
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -199,3 +204,5 @@ int supervision_load_state(uint8 *src_buffer)
 
     return(offset);
 }
+
+#endif

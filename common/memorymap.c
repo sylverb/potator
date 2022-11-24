@@ -1,3 +1,8 @@
+#ifdef TARGET_GNW
+#include "build/config.h"
+#endif
+
+#if !defined(TARGET_GNW) || (defined(TARGET_GNW) &&  defined(ENABLE_EMULATOR_WSV))
 #include "memorymap.h"
 
 #include "controls.h"
@@ -299,3 +304,5 @@ const uint8 *memorymap_getUpperRomBank(void)
 {
     return upperRomBank;
 }
+
+#endif

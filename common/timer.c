@@ -1,3 +1,8 @@
+#ifdef TARGET_GNW
+#include "build/config.h"
+#endif
+
+#if !defined(TARGET_GNW) || (defined(TARGET_GNW) &&  defined(ENABLE_EMULATOR_WSV))
 #include "timer.h"
 
 #include "memorymap.h"
@@ -55,3 +60,4 @@ void timer_set_activated(BOOL activated)
     timer_activated = activated;
 }
 
+#endif
