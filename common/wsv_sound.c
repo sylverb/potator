@@ -1,8 +1,3 @@
-#ifdef TARGET_GNW
-#include "build/config.h"
-#endif
-
-#if !defined(TARGET_GNW) || (defined(TARGET_GNW) &&  defined(ENABLE_EMULATOR_WSV))
 #include "wsv_sound.h"
 
 #include "memorymap.h"
@@ -296,5 +291,3 @@ uint16 sound_load_buffer(uint8 *buffer)
 
     return offset;
 }
-
-#endif

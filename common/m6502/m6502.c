@@ -1,8 +1,3 @@
-#ifdef TARGET_GNW
-#include "build/config.h"
-#endif
-
-#if !defined(TARGET_GNW) || (defined(TARGET_GNW) &&  defined(ENABLE_EMULATOR_WSV))
 /** M65C02: portable 65C02 emulator **************************/
 /**                                                         **/
 /**                         M65C02.c                        **/
@@ -550,5 +545,3 @@ word Run6502(M6502 *R)
     /* Execution stopped */
     return(R->PC.W);
 }
-
-#endif

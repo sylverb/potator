@@ -1,8 +1,3 @@
-#ifdef TARGET_GNW
-#include "build/config.h"
-#endif
-
-#if !defined(TARGET_GNW) || (defined(TARGET_GNW) &&  defined(ENABLE_EMULATOR_WSV))
 #include "gpu.h"
 
 #include "memorymap.h"
@@ -231,5 +226,3 @@ static void add_ghosting(uint32 scanline, uint16 *backbuffer, uint8 innerx, uint
     }
     lineCount = (lineCount + 1) % SV_H;
 }
-
-#endif
